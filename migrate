@@ -249,3 +249,7 @@ add_config crontab/service -
 restart log
 
 
+
+INSTALL 0.1.0
+VERSION 0.1.0
+
