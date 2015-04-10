@@ -1,28 +1,32 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 warn()	{ echo "$@" >&2;	}
 die()	{ warn "$@"; exit 1;	}
 
 main() {
 	if test $# -gt 1 -o "$1" = '-h' -o "$1" = '--help'; then
-		die 'Usage: ./release [-h|--help|--major|--minor|--patch|<version>]'
+		die 'Usage: ./release [-h|--help|-n|--major|--minor|--patch|<version>]'
 	fi
 
-	./build --test || die 'Please fix the build first, then try again'
+	test $# -eq 1 -a "$1" = '-n' && shift || local test='--test'
+	./build $test   || die 'Please fix the build first, then try again'
 
-	if test $# -eq 1; then
+	if test $# -eq 0; then
+		release_project
+		release_migrate
+	else
 		workdir_is_clean || die 'Please commit all changes first, then try again'
 		local version="$(get_version "$1")"             || die 'Failed'
 		if release_version "$version" migrate; then
 			git add migrate                         || die 'Failed'
+			echo "$version" > VERSION               || die 'Failed'
+			release_project
+			release_migrate
+			git add ".release/${version}".*         || die 'Failed'
 			git commit -m "Release $version"        || die 'Failed'
 		fi
-		git tag -a -m "$version" "$version"             || die 'Failed'
-		./build                                         || die 'Failed'
+		git tag -a -m release "$version"                || die 'Failed'
 	fi
-
-	release_project
-	release_migrate
 }
 
 release_project() {
@@ -33,7 +37,6 @@ release_project() {
 	else
 		prev_version=$(list_versions | tail -n 1)
 	fi
-	mkdir -p .release/
 	git diff --binary "$prev_version" | perl -0777 -pe '
 		my $skip = qr{\.gitignore|build|release|deploy|migrate|(.*/)?\.release/.*}ms;
 		s{^diff --git a/($skip) b/\1\n(?:(?!diff)[^\n]*\n)*}{}msg;
