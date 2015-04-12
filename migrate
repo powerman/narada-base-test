@@ -201,6 +201,7 @@ mkdir config
 mkdir tmp
 mkdir var
 mkdir var/log
+mkdir var/use
 
 add_config backup/exclude -
   ./.backup/*
@@ -252,4 +253,7 @@ restart log
 
 INSTALL 0.1.0
 VERSION 0.1.0
+
+only_upgrade
+    mkdir -p var/use
 
